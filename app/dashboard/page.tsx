@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertCircle, TrendingUp, Target, Award } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, startOfDay } from 'date-fns';
+import { format, startOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, eachDayOfInterval } from 'date-fns';
 
 interface Category {
   _id: string;
@@ -142,8 +142,30 @@ export default function DashboardPage() {
 
   const fetchHabitEntries = async () => {
     try {
+      let startDate: Date;
+      let endDate: Date;
+
+      switch (view) {
+        case 'week':
+          startDate = startOfWeek(selectedDate);
+          endDate = endOfWeek(selectedDate);
+          break;
+        case 'month':
+          startDate = startOfMonth(selectedDate);
+          endDate = endOfMonth(selectedDate);
+          break;
+        case 'year':
+          startDate = startOfYear(selectedDate);
+          endDate = endOfYear(selectedDate);
+          break;
+        default:
+          startDate = selectedDate;
+          endDate = selectedDate;
+      }
+
       const params = new URLSearchParams({
-        date: format(selectedDate, 'yyyy-MM-dd'),
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd'),
       });
       
       const response = await fetch(`/api/habits/entries?${params}`);
@@ -295,13 +317,75 @@ export default function DashboardPage() {
     return null;
   }
 
-  // Calculate stats
-  const todayEntries = habitEntries.filter(entry => 
-    format(new Date(entry.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
-  );
-  const completedToday = todayEntries.filter(entry => entry.completed).length;
-  const totalHabits = habits.length;
-  const completionRate = totalHabits > 0 ? Math.round((completedToday / totalHabits) * 100) : 0;
+  // Calculate stats based on view
+  const calculateStats = () => {
+    let relevantEntries: HabitEntry[] = [];
+    let totalDays = 1;
+
+    switch (view) {
+      case 'week':
+        const weekStart = startOfWeek(selectedDate);
+        const weekEnd = endOfWeek(selectedDate);
+        const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+        totalDays = weekDays.length;
+        relevantEntries = habitEntries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          return entryDate >= weekStart && entryDate <= weekEnd;
+        });
+        break;
+      case 'month':
+        const monthStart = startOfMonth(selectedDate);
+        const monthEnd = endOfMonth(selectedDate);
+        const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+        totalDays = monthDays.length;
+        relevantEntries = habitEntries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          return entryDate >= monthStart && entryDate <= monthEnd;
+        });
+        break;
+      case 'year':
+        const yearStart = startOfYear(selectedDate);
+        const yearEnd = endOfYear(selectedDate);
+        const yearDays = eachDayOfInterval({ start: yearStart, end: yearEnd });
+        totalDays = yearDays.length;
+        relevantEntries = habitEntries.filter(entry => {
+          const entryDate = new Date(entry.date);
+          return entryDate >= yearStart && entryDate <= yearEnd;
+        });
+        break;
+      default:
+        relevantEntries = habitEntries.filter(entry => 
+          format(new Date(entry.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+        );
+    }
+
+    const completedEntries = relevantEntries.filter(entry => entry.completed);
+    const totalHabits = habits.length;
+    const maxPossibleCompletions = totalHabits * (view === 'day' ? 1 : totalDays);
+    const completionRate = maxPossibleCompletions > 0 ? Math.round((completedEntries.length / maxPossibleCompletions) * 100) : 0;
+
+    return {
+      completed: completedEntries.length,
+      total: maxPossibleCompletions,
+      completionRate,
+      totalHabits
+    };
+  };
+
+  const stats = calculateStats();
+
+  const getStatsLabel = () => {
+    switch (view) {
+      case 'week':
+        return "Week's Progress";
+      case 'month':
+        return "Month's Progress";
+      case 'year':
+        return "Year's Progress";
+      default:
+        return "Today's Progress";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
@@ -344,8 +428,8 @@ export default function DashboardPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-green-100 text-sm font-medium">Today's Progress</p>
-                  <p className="text-2xl font-bold">{completedToday}/{totalHabits}</p>
+                  <p className="text-green-100 text-sm font-medium">{getStatsLabel()}</p>
+                  <p className="text-2xl font-bold">{stats.completed}/{stats.total}</p>
                 </div>
                 <Target className="w-8 h-8 text-green-100" />
               </div>
@@ -357,7 +441,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-blue-100 text-sm font-medium">Completion Rate</p>
-                  <p className="text-2xl font-bold">{completionRate}%</p>
+                  <p className="text-2xl font-bold">{stats.completionRate}%</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-blue-100" />
               </div>
@@ -369,7 +453,7 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-purple-100 text-sm font-medium">Active Habits</p>
-                  <p className="text-2xl font-bold">{totalHabits}</p>
+                  <p className="text-2xl font-bold">{stats.totalHabits}</p>
                 </div>
                 <Award className="w-8 h-8 text-purple-100" />
               </div>
@@ -411,7 +495,10 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-4">
                 {habits.map((habit) => {
-                  const entry = habitEntries.find(e => e.habitId === habit._id);
+                  const entry = habitEntries.find(e => 
+                    e.habitId === habit._id && 
+                    format(new Date(e.date), 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+                  );
                   return (
                     <HabitCard
                       key={habit._id}
@@ -424,6 +511,9 @@ export default function DashboardPage() {
                         setIsHabitModalOpen(true);
                       }}
                       onDelete={handleDeleteHabit}
+                      onViewAnalytics={(habitId) => {
+                        router.push(`/dashboard/analytics/${habitId}`);
+                      }}
                     />
                   );
                 })}

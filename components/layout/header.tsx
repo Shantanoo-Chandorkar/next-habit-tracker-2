@@ -37,17 +37,19 @@ export function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
-            <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
-              Features
-            </Link>
-            <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
-              Pricing
-            </Link>
-            <Link href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">
-              About
-            </Link>
-          </nav>
+          {!session && (
+            <nav className="hidden md:flex items-center space-x-8">
+              <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Features
+              </Link>
+              <Link href="#testimonials" className="text-gray-600 hover:text-gray-900 transition-colors">
+                Testimonials
+              </Link>
+              <Link href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">
+                About
+              </Link>
+            </nav>
+          )}
 
           {/* Authentication */}
           <div className="hidden md:flex items-center space-x-4">
@@ -118,35 +120,70 @@ export function Header() {
             className="md:hidden p-2"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
-            {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {isMenuOpen ? <X className="w-6 h-6  text-gray-900" /> : <Menu className="w-6 h-6 text-gray-900" />}
           </button>
         </div>
 
         {/* Mobile Navigation */}
-        {isMenuOpen && (
+        {(isMenuOpen && session) ? (
           <div className="md:hidden py-4 border-t border-gray-200">
-            <nav className="flex flex-col space-y-4">
-              <Link href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Features
-              </Link>
-              <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">
-                Pricing
-              </Link>
-              <Link href="#about" className="text-gray-600 hover:text-gray-900 transition-colors">
-                About
-              </Link>
-              {!session && (
-                <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
-                  <Button variant="ghost" asChild>
-                    <Link href="/auth/signin">Sign In</Link>
-                  </Button>
-                  <Button asChild>
-                    <Link href="/auth/signup">Get Started</Link>
-                  </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={session.user?.image || ''} alt={session.user?.name || ''} />
+                    <AvatarFallback>
+                      {session.user?.name?.charAt(0).toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <div className="flex items-center justify-start gap-2 p-2">
+                  <div className="flex flex-col space-y-1 leading-none">
+                    {session.user?.name && (
+                      <p className="font-medium">{session.user.name}</p>
+                    )}
+                    {session.user?.email && (
+                      <p className="w-[200px] truncate text-sm text-muted-foreground">
+                        {session.user.email}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              )}
-            </nav>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard" className="cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="cursor-pointer text-red-600 focus:text-red-600"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+        ) : (
+            <div className="flex items-center space-x-3">
+              <Button variant="ghost" asChild>
+                <Link href="/auth/signin">Sign In</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/auth/signup">Get Started</Link>
+              </Button>
+            </div>
         )}
       </div>
     </header>

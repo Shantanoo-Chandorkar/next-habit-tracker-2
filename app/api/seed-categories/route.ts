@@ -1,4 +1,6 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+// app/api/seed-categories/route.ts
+
+import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongodb';
 import Category from '@/models/Category';
 
@@ -13,36 +15,36 @@ const defaultCategories = [
   { name: 'Personal', color: '#84CC16', icon: 'User' },
 ];
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
+export async function POST(request: Request) {
   try {
     await connectDB();
 
-    // Check if default categories already exist
     const existingCategories = await Category.find({ isDefault: true });
-    
+
     if (existingCategories.length > 0) {
-      return res.status(200).json({ message: 'Default categories already exist' });
+      return NextResponse.json({ message: 'Default categories already exist' }, { status: 200 });
     }
 
-    // Create default categories
     const categories = await Category.insertMany(
       defaultCategories.map(cat => ({
         ...cat,
         isDefault: true,
-        userId: null, // Default categories don't belong to any specific user
+        userId: null,
       }))
     );
 
-    res.status(201).json({
-      message: 'Default categories created successfully',
-      categories,
-    });
+    return NextResponse.json(
+      {
+        message: 'Default categories created successfully',
+        categories,
+      },
+      { status: 201 }
+    );
   } catch (error: any) {
     console.error('Seed categories error:', error);
-    res.status(500).json({ message: error.message || 'Internal server error', error });
+    return NextResponse.json(
+      { message: error.message || 'Internal server error', error },
+      { status: 500 }
+    );
   }
 }

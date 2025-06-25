@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Circle, Edit, Trash2, Clock } from 'lucide-react';
+import { CheckCircle, Circle, Edit, Trash2, Clock, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface HabitCardProps {
@@ -34,6 +34,7 @@ interface HabitCardProps {
   onToggleComplete: (habitId: string, completed: boolean) => void;
   onEdit: (habit: any) => void;
   onDelete: (habitId: string) => void;
+  onViewAnalytics: (habitId: string) => void;
 }
 
 export function HabitCard({
@@ -43,6 +44,7 @@ export function HabitCard({
   onToggleComplete,
   onEdit,
   onDelete,
+  onViewAnalytics,
 }: HabitCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const isCompleted = entry?.completed || false;
@@ -57,13 +59,17 @@ export function HabitCard({
   };
 
   return (
-    <Card className="group hover:shadow-md transition-all duration-200 border-l-4" 
-          style={{ borderLeftColor: habit.categoryId.color }}>
+    <Card className="group hover:shadow-md transition-all duration-200 border-l-4 cursor-pointer" 
+          style={{ borderLeftColor: habit.categoryId.color }}
+          onClick={() => onViewAnalytics(habit._id)}>
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-start space-x-3 flex-1">
             <button
-              onClick={handleToggle}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggle();
+              }}
               disabled={isLoading}
               className={`
                 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-200 mt-1
@@ -128,7 +134,22 @@ export function HabitCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onEdit(habit)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewAnalytics(habit._id);
+              }}
+              className="h-8 w-8 p-0"
+              title="View Analytics"
+            >
+              <BarChart3 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(habit);
+              }}
               className="h-8 w-8 p-0"
             >
               <Edit className="w-4 h-4" />
@@ -136,7 +157,10 @@ export function HabitCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete(habit._id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(habit._id);
+              }}
               className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
             >
               <Trash2 className="w-4 h-4" />
@@ -146,7 +170,7 @@ export function HabitCard({
 
         {isCompleted && (
           <div className="mt-3 text-xs text-green-600 font-medium">
-            ✅ Completed on {format(selectedDate, 'MMM d, yyyy')}
+            Completed on {format(selectedDate, 'MMM d, yyyy')}
           </div>
         )}
       </CardContent>

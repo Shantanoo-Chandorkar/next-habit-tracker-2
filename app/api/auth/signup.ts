@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import connectDB from '@/lib/mongodb';
 import User from '@/models/User';
 import { z } from 'zod';
+import { NextResponse } from 'next/server';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').max(50, 'Name cannot exceed 50 characters'),
@@ -10,22 +11,22 @@ const signupSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
+export async function POST(request: Request) {
   try {
-    // Validate request body
-    const { name, email, password } = signupSchema.parse(req.body);
-
-    // Connect to database
     await connectDB();
+
+    const body = await request.json();
+    const validatedData = signupSchema.parse(body);
+
+    const { name, email, password } = validatedData;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: 'User already exists with this email' });
+      // return res.status(400).json({ message: 'User already exists with this email' });
+      return NextResponse.json({
+        message: 'User already exists with this email',
+      }, { status: 400 });
     }
 
     // Hash password
@@ -41,21 +42,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Return success response (without password)
     const { password: _, ...userWithoutPassword } = user.toObject();
-    
-    res.status(201).json({
+
+    return NextResponse.json({
       message: 'User created successfully',
       user: userWithoutPassword,
-    });
-  } catch (error) {
-    console.error('Signup error:', error);
-    
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({
-        message: 'Validation error',
-        errors: error.errors,
-      });
-    }
+    }, { status: 200 })
 
-    res.status(500).json({ message: 'Internal server error' });
+  } catch (error) {
+
   }
 }
